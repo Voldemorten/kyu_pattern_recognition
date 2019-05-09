@@ -78,16 +78,20 @@ endfunction
 % found by trial and error
 alpha = 0.01;
 it = 500;
-testing = 1;
+testing = 0;
 % -------------- main -----------------
 
 
 % loading data
-data = dlmread("winequality-white.csv",";",1,0);
+% data = dlmread("winequality-white.csv",";",1,0);
+data = load('ex1data1.txt');
+data = [1 1; 2 3; 3 5; 4 6; 5 6.5; 6 6; 7 5; 8 3; 9 1];
 
-[train_data, val_data, test_data] = splitData(data);
+% ----- housing example -----
+
+[train_data, val_data, testData] = splitData(data);
 % ignore split for now
-% train_data = data;
+train_data = data;
 
 
 % strips result column from train_data into y
@@ -102,9 +106,55 @@ theta = zeros(size(X,2),1);
 % step 3: calculate theta
 [theta, his] = gradientDescent(X, y, theta, alpha, length(train_data), it);
 
+% plot cost to see conversion
 if testing
-	% plot cost to see convergence
 	figure; plot(his); ylabel('cost'); xlabel('iterations');
 	errors = testData(test_data, mu, sigma, theta);
 	figure; plot(errors(:,1), errors(:,2)); xlabel('error margin'); ylabel('% correct');
 end
+
+%% plotting data
+figure; hold on;
+plot(X(:,2),y,'rx');
+plot(X(:,2), X*theta, '-')
+legend('data points','linear regression');
+fprintf('Linear regression: R^2 = %.4f\n', computeRSquared(y, X*theta));
+
+% Let's try with an extra parameter
+XP = [train_data(:,1) train_data(:,1).^2];
+[XP mu sigma] = featureNormalize(XP);
+XP = [ones(length(y),1) XP]; % add ones
+theta2 = zeros(size(XP,2),1); % initlize thetas
+[theta2, his] = gradientDescent(XP, y, theta2, alpha, length(XP), it);
+% plotting
+plot(XP(:,2), XP*theta2, '-');
+legend('data points','linear regression','2nd order poly (GD)');
+fprintf('2nd order poly (GD): R^2 = %.4f\n', computeRSquared(y, XP*theta2));
+
+% All of the above could also be solved by using the normal normal equation
+% Lets revert to training data before feature scaling
+
+% XN = [ones(length(y),1) train_data(:,1) train_data(:,1).^2];
+XN = [train_data(:,1) train_data(:,1).^2];
+[XN mu sigma] = featureNormalize(XN);
+XN = [ones(length(y),1) XN]; % add ones
+% find theta
+thetaN = normalEquation(XN, y);
+% plotting
+plot(XN(:,2), XN*thetaN, '-');
+legend('data points','linear regression','2nd order poly (GD)','2nd order poly (NE)');
+fprintf('2nd order poly (NE): R^2 = %.4f\n', computeRSquared(y, XN*thetaN));
+
+% And lets try again with native polyfit equation
+P2 = flip(polyfit(train_data(:,1),y,2));
+XPN = [ones(length(y),1) train_data(:,1) train_data(:,1).^2];
+ppoly = XPN * P2';
+plot(X(:,2), ppoly, '-');
+legend('data points','linear regression','2nd order poly (GD)','2nd order poly (NE)','2n order polyfit');
+fprintf('2nd order poly (NE): R^2 = %.4f\n', computeRSquared(y, XPN*P2'));
+
+
+
+
+%sum((predicted-y).^2)
+%sum((predicted-mean(y)).^2)
