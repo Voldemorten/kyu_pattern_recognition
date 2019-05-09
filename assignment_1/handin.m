@@ -1,4 +1,4 @@
-% clear;
+clear;
 close all;
 
 %functions
@@ -86,9 +86,6 @@ testing = 1;
 data = dlmread("winequality-white.csv",";",1,0);
 
 [train_data, val_data, test_data] = splitData(data);
-% ignore split for now
-% train_data = data;
-
 
 % strips result column from train_data into y
 [X, y] = sepXY(train_data);
@@ -107,4 +104,12 @@ if testing
 	figure; plot(his); ylabel('cost'); xlabel('iterations');
 	errors = testData(test_data, mu, sigma, theta);
 	figure; plot(errors(:,1), errors(:,2)); xlabel('error margin'); ylabel('% correct');
+	% test r-squared
+	fprintf('R^2 = %.4f\n', computeRSquared(y, X*theta));
 end
+
+% lets try with the normal normal equation
+XN = sepXY(train_data); %We separate X and y from the original training data
+XN = [ones(length(y),1) XN]; % again we add ones
+thetaN = normalEquation(XN, y); % then we find theta
+fprintf('2nd order poly (NE): R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared

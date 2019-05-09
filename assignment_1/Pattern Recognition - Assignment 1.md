@@ -33,13 +33,28 @@ Loading of data
 data = dlmread("winequality-white.csv",";",1,0);
 ```
 
-Data is then normalised:
+Splitting of data: Data will be split in training data, validation data and test data in the ratio 0.8, 0.1, 0.1
 
 ```octave
-data = featureNormalize(data);
+function [train_data, val_data, test_data] = splitData(data)
+	% split data in .8, .1, .1
+	N = length(data);
+	train_data = data(1:N/10*8, :);
+	val_data = data(length(train_data)+1:N/10*9, :);
+	test_data = data(length(train_data)+length(val_data)+1:N, :);
+endfunction
 ```
 
-using the following vectorized formula:
+And then the denpendant variable is split from the training data
+
+```octave
+function [X, y] = sepXY(data)
+	X = data(:,1:size(data, 2)-1);
+	y = data(:, size(data,2));
+endfunction
+```
+
+Now that the data is separated, we want to scale our features, because they are in quite different numerical values. We do this by using the following vectorized formula:
 $$
 X_{norm}= \frac{X - mean(X)}{std(X)}
 $$
@@ -53,30 +68,11 @@ function [X_norm mu sigma] = featureNormalize(X)
 end
 ```
 
-Splitting of data: Data will be split in training data, validation data and test data in the ratio 0.8, 0.1, 0.1
+Note that it's important to return mu (mean) and sigma (std) as well, because we have to use this later when testing data. When testing data we want to normalize the data using the same mean and standard deviation that our training data has been scaled with.
 
-```octave
-% split data in .8, .1, .1
-N = length(data);
-train_data = data(1:N/10*8, :);
-%length of train data
-N_td = length(train_data);
+Now the data is prepared and we can continue with our regression.
 
-val_data = data(N_td+1:N/10*9, :);
-N_val = length(val_data);
-
-test_data = data(N_td+N_val+1:N, :);
-N_test = length(test_data);
-```
-
-And then the denpendant variable is split from the training data
-
-```octave
-X = train_data(:,1:size(train_data, 2)-1);
-y = train_data(:, size(train_data,2));
-```
-
-Because we are doing linear regression, we want to get function in the following form:
+Because we are doing linear regression, we want to get a function of the following form:
 $$
 y(x, \theta) = \theta_0 + \theta_1x_1+\theta_2+x_2+ \dots + \theta_Dx_D
 $$
@@ -150,27 +146,29 @@ endfunction
 and to test our predictions, we run these with a different error margin ranging from 0.1 to 2.5 (note that the quality is a rating from 1-10)
 
 ```octave
-X_test = test_data(:,1:size(test_data, 2)-1);
-X_test = featureNormWithExisting(X_test, mu, sigma);
-X_test = [ones(N_test,1), X_test];
-y_test = test_data(:, size(test_data,2));
-res = ones(length(X_test),2);
-errors = ones(25,2);
-for j = 1 : 25
-	errormargin = j/10;
-	correct = 0;
-	for i = 1 : length(X_test)
-		predicted = sum(X_test(i,:)' .*theta);
-		res(i, 1) = predicted;
-		res(i, 2) = y_test(i);
-		if (predicted <= y_test(i)+errormargin && predicted >= y_test(i)-errormargin)
-			correct++;
+function errors = testData(test_data, mu, sigma, theta)
+	X_test = test_data(:,1:size(test_data, 2)-1);
+	X_test = featureNormWithExisting(X_test, mu, sigma);
+	X_test = [ones(length(X_test),1), X_test];
+	y_test = test_data(:, size(test_data,2));
+	res = ones(length(X_test),2);
+	errors = ones(25,2);
+	for j = 1 : 25
+		errormargin = j/10;
+		correct = 0;
+		for i = 1 : length(X_test)
+			predicted = sum(X_test(i,:)' .*theta);
+			res(i, 1) = predicted;
+			res(i, 2) = y_test(i);
+			if (predicted <= y_test(i)+errormargin && predicted >= y_test(i)-errormargin)
+				correct++;
+			end
 		end
+		fprintf('With an error margin of %.2f, the correct results are %.2f percent\n', errormargin, correct/length(X_test)*100);
+		errors(j,1) = errormargin;
+		errors(j,2) = correct/length(X_test);
 	end
-	fprintf('With an error margin of %.2f, the correct results are %.2f percent\n', errormargin, correct/length(X_test)*100);
-	errors(j,1) = errormargin;
-	errors(j,2) = correct/length(X_test);
-end
+endfunction
 ```
 
 ### Results
@@ -224,5 +222,51 @@ And visualized:
 
 ![image-20190508202821659](assets/image-20190508202821659.png)
 
+To check how well our prediction function fits the data, we compute the $$R^2$$ using the following formular:
+
+```octave
+function R2 = computeRSquared(y, predictions)
+	SS_tot = sum((y-mean(y)).^2);
+	SS_res = sum((y-predictions).^2);
+	R2 = 1-(SS_res/SS_tot);
+endfunction
+```
+
+which gives a poor result of only $$R^2=0.29$$ , so the prediction function is not very precise. 
+
 ### Discussion
+
+As the above shows, the prediction function is not really precise, but can still be used within a certain margin. For instance if we are okay with an error margin of $$\pm 1$$ we will have a prediction success of 90.00%. 
+
+As an alternative to the above approach, we could also have done it, using the normal equation. The advantages using the normal equation is, that we don't have to choose alpha and we don't need to iterate, so this should give us a slightly better fit. The disadvantages is, that it computational expensive. Where gradient descent has a running time of $$O(kn^2)$$ the normal equation approach has a running time of $$O(n)=n^3$$ because we need to calcualte the inverse of $$X^TX$$. This means that the normal equation would work bad, when n (amount of rows) is very large. But in our example it should be fine, so we can compare these to approaches.
+
+```octave
+% lets try with the normal normal equation
+XN = sepXY(train_data); %We separate X and y from the original training data
+XN = [ones(length(y),1) XN]; % again we add ones
+thetaN = normalEquation(XN, y); % then we find theta
+fprintf('2nd order poly (NE): R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared
+```
+
+where the *normalEquation* function looks like this
+
+```octave
+function theta = normalEquation(X, y)
+	theta = pinv(X'*X)*X'*y;
+endfunction
+```
+
+where *pinv()* returns the Moore-Penrose pseudoinverse of X.
+
+As expected this gives us a better fit, when computing R-squared: $$R^2=0.2993$$, because we don't have to set alpha manually. As this is just slightly better (and assuming the theta computed by the normal equation is correct), it's concluded that our approach above is correct. 
+
+Both of the success rates are rather low, so maybe we need to look into data preparation.  
+
+
+
+To do: 
+
+Validation, we don't use it.
+
+How to get a better fit
 
