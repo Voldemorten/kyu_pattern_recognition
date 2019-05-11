@@ -83,7 +83,7 @@ testing = 1;
 
 
 % loading data
-data = dlmread("winequality-white.csv",";",1,0);
+data = dlmread('winequality-white.csv',';',1,0);
 
 [train_data, val_data, test_data] = splitData(data);
 

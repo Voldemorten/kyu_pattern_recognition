@@ -1,12 +1,18 @@
 # Pattern Recognition - Assignment 1
 
-This is the first assignment in the course Pattern Recognition, Adv.
+Morten D. Laursen
+
+Student id: a0197363
+
+**This is the first assignment in the course Pattern Recognition, Adv.**
 
 ### Purpose
 
 In the following assignment I will use regression analysis to try to predict the quality of a bottle of white wine. The code in the following assignment is written in octave. 
 
 ### Data
+
+The dataset can be found here: https://archive.ics.uci.edu/ml/datasets/Wine+Quality
 
 The dataset consists of 4898 rows, each corresponding to a different wine. Each row is composed of 12 attributes (columns) which all contain a numerical value. The attributes are as follows: fixed acidity; volatile acidity; citric acid; residual sugar; chlorides; free sulfur dioxide; total sulfur dioxide; density; pH; sulphates; alcohol; quality. The first eleven are independant variables and the last, quality, is the denpendant variable, which I will try to predict using linear regression.
 
@@ -45,6 +51,8 @@ function [train_data, val_data, test_data] = splitData(data)
 endfunction
 ```
 
+*Note that the validation dataset will not be used in this assignment, due to us not comparing different models or changing hyperparameters.* 
+
 And then the denpendant variable is split from the training data
 
 ```octave
@@ -68,7 +76,7 @@ function [X_norm mu sigma] = featureNormalize(X)
 end
 ```
 
-Note that it's important to return mu (mean) and sigma (std) as well, because we have to use this later when testing data. When testing data we want to normalize the data using the same mean and standard deviation that our training data has been scaled with.
+*Note that it's important to return mu (mean) and sigma (std) as well, because we have to use this later when testing data. When testing data we want to normalize the data using the same mean and standard deviation that our training data has been scaled with.*
 
 Now the data is prepared and we can continue with our regression.
 
@@ -143,7 +151,7 @@ function X_norm = featureNormWithExisting(X, mu, sigma)
 endfunction
 ```
 
-and to test our predictions, we run these with a different error margin ranging from 0.1 to 2.5 (note that the quality is a rating from 1-10)
+and to test our predictions, we run these with a different error margin ranging from 0.1 to 2.5 (*note that the quality is a rating from 1-10*)
 
 ```octave
 function errors = testData(test_data, mu, sigma, theta)
@@ -260,13 +268,5 @@ where *pinv()* returns the Moore-Penrose pseudoinverse of X.
 
 As expected this gives us a better fit, when computing R-squared: $$R^2=0.2993$$, because we don't have to set alpha manually. As this is just slightly better (and assuming the theta computed by the normal equation is correct), it's concluded that our approach above is correct. 
 
-Both of the success rates are rather low, so maybe we need to look into data preparation.  
-
-
-
-To do: 
-
-Validation, we don't use it.
-
-How to get a better fit
+Both of the success rates are rather low, but keep in my this is a linear regression. The results might be much better if we used polynomial regression, but that is out of scope for this assignment.  
 
