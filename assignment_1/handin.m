@@ -15,6 +15,16 @@ function cost = calcCost(X, y, theta, N)
 	cost = sum((H-y) .^2)/(2*N);
 endfunction;
 
+% DOESNT WORK! _----------
+function [J, grad] = maximumLikelihoodCost(theta, X, y)
+	m = length(y);
+	h0 = X * theta;
+	% sigmoid function
+	h = ones(size(h0)) ./ (1+exp(-h0));
+	J = (-y'*log(h)-(1-y')*log(1-h))/m;
+	grad = ((h-y)'*X)'/m;
+endfunction
+
 function [theta, his] = gradientDescent(X, y, theta, alpha, N, it)
 	his = zeros(it, 1);
 	for i = 1 : it
@@ -78,7 +88,7 @@ endfunction
 % found by trial and error
 alpha = 0.01;
 it = 500;
-testing = 1;
+testing = 0;
 % -------------- main -----------------
 
 
@@ -105,11 +115,23 @@ if testing
 	errors = testData(test_data, mu, sigma, theta);
 	figure; plot(errors(:,1), errors(:,2)); xlabel('error margin'); ylabel('% correct');
 	% test r-squared
-	fprintf('R^2 = %.4f\n', computeRSquared(y, X*theta));
 end
+fprintf('R^2 = %.4f\n', computeRSquared(y, X*theta));
 
 % lets try with the normal normal equation
 XN = sepXY(train_data); %We separate X and y from the original training data
 XN = [ones(length(y),1) XN]; % again we add ones
 thetaN = normalEquation(XN, y); % then we find theta
 fprintf('2nd order poly (NE): R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared
+
+% DOESN'T WORK! ---------------------
+% lets try maximum likelihood base
+XL = X;
+% initlize theta
+init_theta = zeros(size(XN,2),1);
+options = optimset('GradObj', 'on', 'MaxIter', 400);
+
+%  Run fminunc to obtain the optimal theta
+%  This function will return theta and the cost
+[thetaL, costL] = fminunc(@(t)(maximumLikelihoodCost(t, X, y)), init_theta, options);
+fprintf('2nd order poly (ML): R^2 = %.4f\n', computeRSquared(y, XL*thetaL));
