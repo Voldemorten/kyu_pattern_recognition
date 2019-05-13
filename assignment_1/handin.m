@@ -13,17 +13,13 @@ function cost = calcCost(X, y, theta, N)
 	H = X*theta;
 	% The cost function is defined as 1/2N*sum((H-y)^2)
 	cost = sum((H-y) .^2)/(2*N);
-endfunction;
 
-% DOESNT WORK! _----------
-function [J, grad] = maximumLikelihoodCost(theta, X, y)
-	m = length(y);
-	h0 = X * theta;
-	% sigmoid function
-	h = ones(size(h0)) ./ (1+exp(-h0));
-	J = (-y'*log(h)-(1-y')*log(1-h))/m;
-	grad = ((h-y)'*X)'/m;
-endfunction
+	%trying another basis function
+	mu = mean(X)
+	H = X*theta;
+	% The cost function is defined as 1/2N*sum((H-y)^2)
+	cost = sum((H-y) .^2)/(2*N);
+endfunction;
 
 function [theta, his] = gradientDescent(X, y, theta, alpha, N, it)
 	his = zeros(it, 1);
@@ -122,16 +118,56 @@ fprintf('R^2 = %.4f\n', computeRSquared(y, X*theta));
 XN = sepXY(train_data); %We separate X and y from the original training data
 XN = [ones(length(y),1) XN]; % again we add ones
 thetaN = normalEquation(XN, y); % then we find theta
-fprintf('2nd order poly (NE): R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared
+fprintf('With normal equation: R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared
 
-% DOESN'T WORK! ---------------------
-% lets try maximum likelihood base
+function erms = errorfunction(X, theta, y)
+	e = 0.5 * sum((X*theta-y).^2);
+	erms = sqrt(2*e/length(y));
+endfunction
+
+% Polynomial regression
+% Model selection
+M = 3;
+X = sepXY(train_data);
+[Xval yval] = sepXY(val_data);
+XvalL = Xval;
+XvalLO = [ones(length(yval),1) XvalL];
 XL = X;
-% initlize theta
-init_theta = zeros(size(XN,2),1);
-options = optimset('GradObj', 'on', 'MaxIter', 400);
+errorhis = [];
+errorhis(1,1) = 1;
+errorhis(1,2) = errorfunction(XN, thetaN, y);
+errorhis(1,3) = errorfunction(XvalLO, thetaN, yval);
+% Adding M dimensions
+for i = 2 : M
+	% fprintf('M:%.f\n', i)
+	XL = [XL X .^i];
+	XvalL = [XvalL Xval .^i];
+	% fprintf('Size of XL:%.f\n',size(XL,2));
+	% add ones to new matric
+	XLO = [ones(length(y),1) XL];
+	XvalLO = [ones(length(yval),1) XvalL];
 
-%  Run fminunc to obtain the optimal theta
-%  This function will return theta and the cost
-[thetaL, costL] = fminunc(@(t)(maximumLikelihoodCost(t, X, y)), init_theta, options);
-fprintf('2nd order poly (ML): R^2 = %.4f\n', computeRSquared(y, XL*thetaL));
+	thetaL = normalEquation(XLO, y);
+	% rsquared = computeRSquared(y, XLO*thetaL);
+	% fprintf('%.f order poly (NE): R^2 = %.4f\n', i, rsquared);
+	errorhis(i,1) = i;
+	errorhis(i,2) = errorfunction(XLO, thetaL, y);
+	errorhis(i,3) = errorfunction(XvalLO, thetaL, yval);
+end
+if testing
+	figure;
+	plot(errorhis(:,1),errorhis(:,2),'-');
+	hold on;
+	plot(errorhis(:,1),errorhis(:,3),'-');
+	legend('training', 'validation'); xlabel('M'); ylabel('erms');
+end
+
+
+% initlize theta
+% init_theta = zeros(size(XN,2),1);
+% options = optimset('GradObj', 'on', 'MaxIter', 400);
+%
+% %  Run fminunc to obtain the optimal theta
+% %  This function will return theta and the cost
+% [thetaL, costL] = fminunc(@(t)(maximumLikelihoodCost(t, X, y)), init_theta, options);
+% fprintf('2nd order poly (ML): R^2 = %.4f\n', computeRSquared(y, XL*thetaL));
