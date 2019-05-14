@@ -11,9 +11,9 @@ sig_2 = sig_1;
 n = 10;
 
 % debug
-show_plots = 1;
+show_plots = 0;
 
-% Exercise 1
+% Exercise 1 - Initialize data
 R1 = mvnrnd(m_1,sig_1,n);
 R2 = mvnrnd(m_2,sig_2,n);
 
@@ -23,6 +23,7 @@ if show_plots
 	printf("Showing original plot. Press any key to draw P1 and P2");
 	input("","s");
 end
+
 % Exercise 2 (PCA)
 % Step 1: Merge data;
 R = [R1;R2];
@@ -38,12 +39,13 @@ eig_vec = eig_vec(:,i);
 scale = 10;
 
 if show_plots
-	% Draw eigenvector
+	% Draw P1, P2
 	line([-eig_vec(1,1) * scale eig_vec(1,1) * scale],[-eig_vec(2,1) * scale eig_vec(2,1) * scale], "linestyle", "-", "color", "b");
 	line([-eig_vec(1,2) * scale eig_vec(1,2) * scale],[-eig_vec(2,2) * scale eig_vec(2,2) * scale], "linestyle", "-", "color", "b");
 
-	printf("Press to move data by substracting mean");
+	printf("Press any key to move data by substracting mean");
 	input("","s");
+
 	% Move data by mean
 	R = R-mean(R);
 	figure; hold on;
