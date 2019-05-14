@@ -15,7 +15,7 @@ function cost = calcCost(X, y, theta, N)
 	cost = sum((H-y) .^2)/(2*N);
 
 	%trying another basis function
-	mu = mean(X)
+	mu = mean(X);
 	H = X*theta;
 	% The cost function is defined as 1/2N*sum((H-y)^2)
 	cost = sum((H-y) .^2)/(2*N);
@@ -55,7 +55,7 @@ function errors = testData(test_data, mu, sigma, theta)
 				correct++;
 			end
 		end
-		fprintf('With an error margin of %.2f, the correct results are %.2f percent\n', errormargin, correct/length(X_test)*100);
+		printf('With an error margin of %.2f, the correct results are %.2f percent\n', errormargin, correct/length(X_test)*100);
 		errors(j,1) = errormargin;
 		errors(j,2) = correct/length(X_test);
 	end
@@ -112,62 +112,101 @@ if testing
 	figure; plot(errors(:,1), errors(:,2)); xlabel('error margin'); ylabel('% correct');
 	% test r-squared
 end
-fprintf('R^2 = %.4f\n', computeRSquared(y, X*theta));
+printf('R^2 = %.4f\n', computeRSquared(y, X*theta));
 
 % lets try with the normal normal equation
 XN = sepXY(train_data); %We separate X and y from the original training data
 XN = [ones(length(y),1) XN]; % again we add ones
 thetaN = normalEquation(XN, y); % then we find theta
-fprintf('With normal equation: R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared
+printf('With normal equation: R^2 = %.4f\n', computeRSquared(y, XN*thetaN)); %and compute R squared
 
 function erms = errorfunction(X, theta, y)
 	e = 0.5 * sum((X*theta-y).^2);
 	erms = sqrt(2*e/length(y));
 endfunction
 
+% Check individual features
+strings = ['fixed acidity';'volatile acidity';'citric acid';'residual sugar';'chlorides';'free sulfur dioxide';'total sulfur dioxide';'density';'pH';'sulphates';'alcohol';'quality'];
+
+[XI, y] = sepXY(train_data);
+% Benchmark error function of all features
+theta = normalEquation(XI, y);
+error = errorfunction(XI, theta, y);
+printf("All features has an erms of %.2f\n", error);
+printf('All features has an R^2 of %.2f\n', computeRSquared(y, XI*theta));
+for i = 1 : size(strings) - 1
+	%extract element number i
+	X = XI(:,i);
+	%add ones
+	X = [ones(length(y),1) X]; % again we add ones
+	theta = normalEquation(X, y);
+	% we want to minimize this one
+	error = errorfunction(X, theta, y);
+	printf("Feature %s has an erms of %.2f\n", strings(i,:), error);
+	printf("Feature %s has an R2 of %.2f\n", strings(i,:), computeRSquared(y, X*theta));
+end
+
+%trying with the least errornous features
+XI = [XI(:,2) XI(:,5) XI(:,8) XI(:,11)];
+XIO = [ones(length(y),1) XI];
+theta = normalEquation(XIO, y);
+error = errorfunction(XIO, theta, y) %0.78556
+printf("Least errornous features has an R2 of %.2f\n", computeRSquared(y, XIO*theta));
+
+%lets try with the second order.
+% x1 … x4 = x1*x1 x1*x2 …
+XIout = XI;
+s = size(XI,2);
+for i = 1 : s
+	for j = s+1-i : -1 : 1
+		% printf("i:%.f, j:%.f\n",i,j)
+		intermediate = XI(:,i).*XI(:,j);
+		XIout = [XIout intermediate];
+	end
+end
+XI = XIout;
+% size of XI should now be 14. 4 original + 4 + 3 + 2 +1
+% add ones
+XI = [ones(length(y),1) XI];
+theta = normalEquation(XI, y);
+error = errorfunction(XI, theta, y) % 0.78057
+printf("Least errornous features in 2nd order has an R2 of %.2f\n", computeRSquared(y, XI*theta));
+
+
 % Polynomial regression
 % Model selection
-M = 3;
-X = sepXY(train_data);
-[Xval yval] = sepXY(val_data);
-XvalL = Xval;
-XvalLO = [ones(length(yval),1) XvalL];
-XL = X;
-errorhis = [];
-errorhis(1,1) = 1;
-errorhis(1,2) = errorfunction(XN, thetaN, y);
-errorhis(1,3) = errorfunction(XvalLO, thetaN, yval);
-% Adding M dimensions
-for i = 2 : M
-	% fprintf('M:%.f\n', i)
-	XL = [XL X .^i];
-	XvalL = [XvalL Xval .^i];
-	% fprintf('Size of XL:%.f\n',size(XL,2));
-	% add ones to new matric
-	XLO = [ones(length(y),1) XL];
-	XvalLO = [ones(length(yval),1) XvalL];
-
-	thetaL = normalEquation(XLO, y);
-	% rsquared = computeRSquared(y, XLO*thetaL);
-	% fprintf('%.f order poly (NE): R^2 = %.4f\n', i, rsquared);
-	errorhis(i,1) = i;
-	errorhis(i,2) = errorfunction(XLO, thetaL, y);
-	errorhis(i,3) = errorfunction(XvalLO, thetaL, yval);
-end
-if testing
-	figure;
-	plot(errorhis(:,1),errorhis(:,2),'-');
-	hold on;
-	plot(errorhis(:,1),errorhis(:,3),'-');
-	legend('training', 'validation'); xlabel('M'); ylabel('erms');
-end
-
-
-% initlize theta
-% init_theta = zeros(size(XN,2),1);
-% options = optimset('GradObj', 'on', 'MaxIter', 400);
+% -------------------------------------
+% M = 3;
+% X = sepXY(train_data);
+% [Xval yval] = sepXY(val_data);
+% XvalL = Xval;
+% XvalLO = [ones(length(yval),1) XvalL];
+% XL = X;
+% errorhis = [];
+% errorhis(1,1) = 1;
+% errorhis(1,2) = errorfunction(XN, thetaN, y);
+% errorhis(1,3) = errorfunction(XvalLO, thetaN, yval);
+% % Adding M dimensions
+% for i = 2 : M
+% 	% printf('M:%.f\n', i)
+% 	XL = [XL X .^i];
+% 	XvalL = [XvalL Xval .^i];
+% 	% printf('Size of XL:%.f\n',size(XL,2));
+% 	% add ones to new matric
+% 	XLO = [ones(length(y),1) XL];
+% 	XvalLO = [ones(length(yval),1) XvalL];
 %
-% %  Run fminunc to obtain the optimal theta
-% %  This function will return theta and the cost
-% [thetaL, costL] = fminunc(@(t)(maximumLikelihoodCost(t, X, y)), init_theta, options);
-% fprintf('2nd order poly (ML): R^2 = %.4f\n', computeRSquared(y, XL*thetaL));
+% 	thetaL = normalEquation(XLO, y);
+% 	% rsquared = computeRSquared(y, XLO*thetaL);
+% 	% printf('%.f order poly (NE): R^2 = %.4f\n', i, rsquared);
+% 	errorhis(i,1) = i;
+% 	errorhis(i,2) = errorfunction(XLO, thetaL, y);
+% 	errorhis(i,3) = errorfunction(XvalLO, thetaL, yval);
+% end
+% if testing
+% 	figure;
+% 	plot(errorhis(:,1),errorhis(:,2),'-');
+% 	hold on;
+% 	plot(errorhis(:,1),errorhis(:,3),'-');
+% 	legend('training', 'validation'); xlabel('M'); ylabel('erms');
+% end
