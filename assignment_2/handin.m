@@ -12,7 +12,7 @@ n = 100;
 c = 2;
 
 % debug
-show_plots = 0;
+show_plots = 1;
 
 % Exercise 1 - Initialize data
 R1 = mvnrnd(m_1,sig_1,n);
