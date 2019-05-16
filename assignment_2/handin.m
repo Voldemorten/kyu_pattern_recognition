@@ -8,7 +8,7 @@ m_1 = [3;1];
 m_2 = [1;3];
 sig_1 = [1 2; 2 5];
 sig_2 = sig_1;
-n = 1000;
+n = 1000; % number of random datapoint to generate x 2
 c = 2;
 
 % debug
@@ -17,9 +17,6 @@ show_plots = 1;
 % Exercise 1 - Initialize data
 R1 = mvnrnd(m_1,sig_1,n);
 R2 = mvnrnd(m_2,sig_2,n);
-%demo:
-% R1 = [2 3;3 4;4 5;5 6;5 7];
-% R2 = [2 1;3 2;4 2;4 3;6 4;7 6];
 
 if show_plots
 	figure; plot(R1(:,1),R1(:,2),'r+'); hold on; plot(R2(:,1),R2(:,2),'bo');
@@ -67,7 +64,7 @@ if show_plots
 	legend("R1","R2","P1","P2"); title("Centered data by subtracting mean");
 end
 
-% Step 6: Reconstruct vector x from PC
+% Step 7: Reconstruct vector x from PC
 x_hat = y*eig_vec + mean(R);
 
 if show_plots
@@ -124,7 +121,7 @@ Sb = (ones(c,1) * mean(R) - mu)' * (ones(c,1) * mean(R) - mu);
 % Step 3: Calculate mean within-class scatter
 Sw = (R - mu(c,:))'*(R - mu(c,:));
 % Step 4: get eigenvector and eigenvalue of maxmimum between-class scatter to within-class scatter ratio.
-[eig_vec, eig_val] = eig(Sw\Sb);
+[eig_vec, eig_val] = eig(Sb/Sw);
 % Step 5: Sort eigenvectors
 [eig_val, i] = sort(diag(eig_val), 'descend');
 eig_vec = eig_vec(:,i);
@@ -140,7 +137,7 @@ if show_plots
 	legend("R1","R2","P1"); title("LDA and data recentered")
 end
 
-% Step 7: Project DTA on LDA
+% Step 7: Project data on LDA
 y = R_new*eig_vec;
 % Step 8: Reconstruct data
 x_hat = y(:,1)*eig_vec(:,1)' + mean(R);
