@@ -6,32 +6,30 @@ clear; close all;
 % -------------------
 % e-step!
 % -------------------
-function w = eStep(X, m, c, mu, sigma, prior)
+function w = eStep(X, N, K, mu, sigma, prior)
 	% initlize w, which is the matrix, that contains the probabilities for each data point, to be in cluster 1 or 2.
-	% That means it should be a m x c matrix. M data points and c clusters.
-	w = ones(m, c);
+	% That means it should be a N x K matrix. N data points and K clusters.
+	w = ones(N, K);
 
-	% calculate the probability for each datapoint, given the the current mu and the current covariance assigned to each cluster. In first iteration the mu's are different, but the covariance are the same.
-	pdf = ones(m, c);
-	% For each cluster...
-    for (j = 1 : c)
+	% calculate the probability for each datapoint, given the the current mu and the current covariance assigned to each cluster. In first iteration the mu's are different, but the covariance are the same. We have to do this for each cluster.
+	pdf = ones(N, K);
+    for (j = 1 : K)
         pdf(:, j) = pdfGaussian(X, mu(j, :), sigma{j});
     end
-	% pdf
 	%multiple each value with the prior
 	pdf = pdf .* prior;
 
-	% normalizing
+	% normalizing -> makes w sum to 1.
 	w = pdf ./ sum(pdf, 2);
 	% done!
 endfunction
 
 % -------------------
-% m-step!
+% M-step!
 % -------------------
-function [prior, mu, sigma] = mStep(w, m, c, mu, sigma, X, prior)
-	prior = sum(w)/m; % new prior 1x2
-	for (j = 1 : c)
+function [prior, mu, sigma] = mStep(w, N, K, mu, sigma, X, prior)
+	prior = sum(w)/N; % new prior 1x2
+	for (j = 1 : K)
 		mu(j, :) = (w(:,j)' * X) ./ sum(w);
 
 		% To make it eassier, we subtract mu from X
@@ -39,7 +37,7 @@ function [prior, mu, sigma] = mStep(w, m, c, mu, sigma, X, prior)
 
 		% And then we compute the contribution covariance for each row in X
 		sigma_ = zeros(2, 2);
-		for (i = 1 : m)
+		for (i = 1 : N)
 			sigma_ = sigma_ + (w(i, j) .* (X_mu(i, :)' * X_mu(i, :)));
 		end
 		sigma{j} = sigma_ ./ sum(w(:, j));
@@ -55,8 +53,8 @@ function pdf = pdfGaussian(X, mu, sigma)
 	pdf = (1 / sqrt((2*pi)^2 * det(sigma))) * (exp(-1/2 * sum((X * inv(sigma) .* X),2)));
 endfunction
 
-function similar = converged(mu, mu_, epsilon)
-	similar = all(abs(mu-mu_) <= epsilon);
+function converged = converged(mu, mu_, epsilon)
+	converged = all(abs(mu-mu_) <= epsilon);
 end
 
 % -------------------
@@ -73,7 +71,7 @@ m_2 = [-1 -2];
 sig_1 = [3 .2; .2 2];
 sig_2 = [2 0; 0 1];
 n = 300; % number of random datapoint to generate x 2
-c = 2; % classes or clusters
+K = 2; % classes or clusters
 
 % debug
 show_plots = 1;
@@ -116,8 +114,8 @@ if show_plots
 	Z2 = reshape(z2, gridSize, gridSize);
 
 	% Plot the contour lines to show the pdf over the data.
-	[C, h] = contour(u, u, Z1);
-	[C, h] = contour(u, u, Z2);
+	[c, h] = contour(u, u, Z1);
+	[c, h] = contour(u, u, Z2);
 	axis([-6 6 -6 6])
 
 	title('Original Data and PDFs');
@@ -129,14 +127,16 @@ end
 % Merge data
 X = [R1;R2];
 % Set initial parameters
-m = size(X,1);
+
+% Get number of observations
+N = size(X,1)
 
 % Initialize mu with the two first datapoints.
 mu = X([1 2], :);
 
 % Initialize the covariance matrix for each cluster to be equal to the covariance of the full data set
 sigma = [];
-for (j = 1 : c)
+for (j = 1 : K)
     sigma{j} = cov(X);
 end
 
@@ -145,10 +145,10 @@ prior = [.5 .5];
 
 for(i = 1 : 1000)
 	i
-	w = eStep(X, m, c, mu, sigma, prior);
+	w = eStep(X, N, K, mu, sigma, prior);
 
 	mu_ = mu;
-	[prior, mu, sigma] = mStep(w, m, c, mu, sigma, X, prior);
+	[prior, mu, sigma] = mStep(w, N, K, mu, sigma, X, prior);
 
 	if(converged(mu, mu_, 0.00001))
 		break;
@@ -185,8 +185,8 @@ if(show_plots)
 	Z2 = reshape(z2, gridSize, gridSize);
 
 	% Plot the contour lines to show the pdf over the data.
-	[C, h] = contour(u, u, Z1);
-	[C, h] = contour(u, u, Z2);
+	[c, h] = contour(u, u, Z1);
+	[c, h] = contour(u, u, Z2);
 	axis([-6 6 -6 6])
 
 	title('Original Data and Estimated PDFs');
